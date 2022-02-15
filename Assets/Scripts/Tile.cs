@@ -8,22 +8,22 @@ public class Tile : MonoBehaviour
     private SpriteRenderer Renderer;
     public Vector2Int Position;
 
-    private void Start()
+    private void Start() 
     {
         Renderer = GetComponent<SpriteRenderer>();
     }
 
-    public void Select()
+    public void Select()// this function changes color of the selected piece
     {
         Renderer.color = Color.grey;
     }
 
-    public void Unselect()
+    public void Unselect()// this function changes color of unseclected piece
     {
         Renderer.color = Color.white;
     }
 
-    private void OnMouseDown()
+    private void OnMouseDown() //on mouse click event
     {
         {
             if (selected != null)
@@ -49,4 +49,5 @@ public class Tile : MonoBehaviour
             }
         }
     }
+
 }

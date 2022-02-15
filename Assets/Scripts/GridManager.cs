@@ -4,15 +4,18 @@ using UnityEngine;
 
 public class GridManager : MonoBehaviour
 {
-    public List<Sprite> Sprites = new List<Sprite>(); 
+    public List<Sprite> Sprites = new List<Sprite>();
     public GameObject TilePrefab;
+   
     private int width = 8;
     private int height = 8;
     public float distance = 1.3f;
     private GameObject[,] Grid;
 
-    public void SwapTiles(Vector2Int tile1Position, Vector2Int tile2Position) //this function manages the process needed to swap 2 tiles
+    public void SwapTiles(Vector2Int tile1Position, Vector2Int tile2Position) 
     {
+
+        
         GameObject tile1 = Grid[tile1Position.x, tile1Position.y];
         SpriteRenderer renderer1 = tile1.GetComponent<SpriteRenderer>();
 
@@ -32,7 +35,7 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    SpriteRenderer GetSpriteRendererAt(int column, int row) //this function returns the sprite of a tile
+    SpriteRenderer GetSpriteRendererAt(int column, int row)
     {
         if (column < 0 || column >= width
              || row < 0 || row >= height    )
@@ -42,7 +45,7 @@ public class GridManager : MonoBehaviour
         return renderer;
     }
 
-    bool CheckMatches() //this function checks for matched tiles
+    bool CheckMatches()
     {
         HashSet<SpriteRenderer> matchedTiles = new HashSet<SpriteRenderer>(); // 1
         for (int row = 0; row < height; row++)
@@ -103,7 +106,7 @@ public class GridManager : MonoBehaviour
         return result;
     }
 
-    void FillHoles() //this function manages which tile will fall down after a match
+    void FillHoles()
     {
         for (int column = 0; column < width; column++)
         {
@@ -124,7 +127,7 @@ public class GridManager : MonoBehaviour
         }
     }
 
-        void InitGrid() //this function initiate our board for the game
+        void InitGrid()
     {
         Vector3 positionOffset = transform.position - new Vector3(width * distance / 2.0f, height * distance / 2.0f, 0); 
         for (int row = 0; row < height; row++)
@@ -151,7 +154,7 @@ public class GridManager : MonoBehaviour
     }
 
 // Update is called once per frame
-    void Update()
+void Update()
     {
         FillHoles();
     }
