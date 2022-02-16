@@ -1,18 +1,54 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using UnityEngine.SceneManagement;
 
 public class GridManager : MonoBehaviour
 {
     public List<Sprite> Sprites = new List<Sprite>();
     public GameObject TilePrefab;
-   
-    private int width = 8;
-    private int height = 8;
-    public float distance = 1.3f;
+    private int dimension = 8;
     private GameObject[,] Grid;
+    private float distance = 1.3f;
+    public TMP_Text score;
 
-    public void SwapTiles(Vector2Int tile1Position, Vector2Int tile2Position) 
+    private int _score;
+    public int Score
+    {
+        get
+        {
+            return _score;
+        }
+
+        set
+        {
+            _score = value;
+            score.text = "Score: " + _score.ToString();
+        }
+    }
+
+    SpriteRenderer GetSpriteRendererAt(int column, int row)//get the renderer of a tile
+    {
+        if (column < 0 || column >= dimension
+             || row < 0 || row >= dimension)
+            return null;
+        GameObject tile = Grid[column, row];
+        SpriteRenderer renderer = tile.GetComponent<SpriteRenderer>();
+        return renderer;
+    }
+
+    Sprite GetSpriteAt(int column, int row) //get the sprite value of a tile
+    {
+        if (column < 0 || column >= dimension
+            || row < 0 || row >= dimension)
+            return null;
+        GameObject tile = Grid[column, row];
+        SpriteRenderer renderer = tile.GetComponent<SpriteRenderer>();
+        return renderer.sprite;
+    }
+
+    public void SwapTiles(Vector2Int tile1Position, Vector2Int tile2Position) //swapping 2 tiles
     {
 
         
@@ -26,6 +62,7 @@ public class GridManager : MonoBehaviour
         Sprite temp = renderer1.sprite;
         renderer1.sprite = renderer2.sprite;
         renderer2.sprite = temp;
+
         bool changesOccurs = CheckMatches();
         if (!changesOccurs)
         {
@@ -33,35 +70,32 @@ public class GridManager : MonoBehaviour
             renderer1.sprite = renderer2.sprite;
             renderer2.sprite = temp;
         }
-    }
-
-    SpriteRenderer GetSpriteRendererAt(int column, int row)
-    {
-        if (column < 0 || column >= width
-             || row < 0 || row >= height    )
-            return null;
-        GameObject tile = Grid[column, row];
-        SpriteRenderer renderer = tile.GetComponent<SpriteRenderer>();
-        return renderer;
-    }
-
-    bool CheckMatches()
-    {
-        HashSet<SpriteRenderer> matchedTiles = new HashSet<SpriteRenderer>(); // 1
-        for (int row = 0; row < height; row++)
+        else
         {
-            for (int column = 0; column <width; column++) // 2
+            do
             {
-                SpriteRenderer current = GetSpriteRendererAt(column, row); // 3
+                PieceFall();
+            } while (CheckMatches());
+        }
+    }
 
-                List<SpriteRenderer> horizontalMatches = FindColumnMatchForTile(column, row, current.sprite); // 4
+    bool CheckMatches()//flag when matches appear
+    {
+        HashSet<SpriteRenderer> matchedTiles = new HashSet<SpriteRenderer> (); 
+        for (int row = 0; row < dimension; row++)
+        {
+            for (int column = 0; column < dimension; column++) 
+            {
+                SpriteRenderer current = GetSpriteRendererAt(column, row); 
+
+                List<SpriteRenderer> horizontalMatches = FindColumnMatchForTile(column, row, current.sprite); 
                 if (horizontalMatches.Count >= 2)
                 {
                     matchedTiles.UnionWith(horizontalMatches);
-                    matchedTiles.Add(current); // 5
+                    matchedTiles.Add(current); 
                 }
 
-                List<SpriteRenderer> verticalMatches = FindRowMatchForTile(column, row, current.sprite); // 6
+                List<SpriteRenderer> verticalMatches = FindRowMatchForTile(column, row, current.sprite); 
                 if (verticalMatches.Count >= 2)
                 {
                     matchedTiles.UnionWith(verticalMatches);
@@ -70,92 +104,135 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        foreach (SpriteRenderer renderer in matchedTiles) // 7
+        foreach (SpriteRenderer renderer in matchedTiles) 
         {
             renderer.sprite = null;
         }
-        return matchedTiles.Count > 0; // 8
+        Score += matchedTiles.Count;
+        return matchedTiles.Count > 0; 
     }
-    List<SpriteRenderer> FindColumnMatchForTile(int col, int row, Sprite sprite)
+
+    List<SpriteRenderer> FindColumnMatchForTile(int col, int row, Sprite sprite)//check for horizontal matches
     {
         List<SpriteRenderer> result = new List<SpriteRenderer>();
-        for (int i = col + 1; i < width; i++)
+        for (int i = col + 1; i < dimension; i++)
         {
+            
             SpriteRenderer nextColumn = GetSpriteRendererAt(i, row);
             if (nextColumn.sprite != sprite)
             {
                 break;
             }
             result.Add(nextColumn);
+            
         }
         return result;
     }
 
-    List<SpriteRenderer> FindRowMatchForTile(int col, int row, Sprite sprite)
+    List<SpriteRenderer> FindRowMatchForTile(int col, int row, Sprite sprite)//check for vertical matches
     {
-        List<SpriteRenderer> result = new List<SpriteRenderer>  ();
-        for (int i = row + 1; i < height; i++)
+        List<SpriteRenderer> result = new List<SpriteRenderer>();
+        for (int i = row + 1; i < dimension; i++)
         {
+            
             SpriteRenderer nextRow = GetSpriteRendererAt(col, i);
             if (nextRow.sprite != sprite)
             {
                 break;
             }
             result.Add(nextRow);
+            
         }
         return result;
     }
 
-    void FillHoles()
+
+    void fillBoard() //fill our board with jewel sprites
     {
-        for (int column = 0; column < width; column++)
+        Vector3 positionOffset = transform.position - new Vector3(dimension * distance / 2.0f, dimension * distance / 2.0f, 0);
+        for (int row = 0; row < dimension; row++)
         {
-            for (int row = 0; row < height; row++)
+            for (int column = 0; column < dimension; column++)
             {
-                while (GetSpriteRendererAt(column, row).sprite == null)
+                List<Sprite> possibleSprites = new List<Sprite>(Sprites); // list of sprites that do not contains the current sprite being checked
+
+
+                Sprite left1 = GetSpriteAt(column - 1, row);
+                Sprite left2 = GetSpriteAt(column - 2, row);
+                if (left2 != null && left1 == left2)
                 {
-                    for (int filler = row; filler < height - 1; filler++)
+                    possibleSprites.Remove(left1);
+                }
+
+                Sprite down1 = GetSpriteAt(column, row - 1);
+                Sprite down2 = GetSpriteAt(column, row - 2);
+                if (down2 != null && down1 == down2)
+                {
+                    possibleSprites.Remove(down1);
+                }
+
+                GameObject newTile = Instantiate(TilePrefab);
+                SpriteRenderer renderer = newTile.GetComponent<SpriteRenderer>();
+                renderer.sprite = Sprites[Random.Range(0, possibleSprites.Count)];
+                Tile tile = newTile.AddComponent<Tile>(); //call the Tile from the Tile script
+                tile.Position = new Vector2Int(column, row); //call the position from the Tile script
+                newTile.transform.parent = transform;
+                newTile.transform.position = new Vector3(column * distance, row * distance, 0) + positionOffset;
+
+                Grid[column, row] = newTile;
+            }
+        }
+    }
+
+    void PieceFall() //Make upper pieces fall down after match
+    {
+        for (int column = 0; column < dimension; column++)
+        {
+            for (int row = 0; row < dimension; row++) 
+            {
+                while (GetSpriteRendererAt(column, row).sprite == null) 
+                {
+                    for (int filler = row; filler < dimension - 1; filler++) 
                     {
-                        SpriteRenderer current = GetSpriteRendererAt(column, filler);
+                        SpriteRenderer current = GetSpriteRendererAt(column, filler); 
                         SpriteRenderer next = GetSpriteRendererAt(column, filler + 1);
                         current.sprite = next.sprite;
                     }
-                    SpriteRenderer last = GetSpriteRendererAt(column, width - 1);
-                    last.sprite = Sprites[Random.Range(0, Sprites.Count)];
+                    SpriteRenderer last = GetSpriteRendererAt(column, dimension - 1);
+                    last.sprite = Sprites[Random.Range(0, Sprites.Count)]; 
                 }
             }
         }
     }
 
-        void InitGrid()
+    public void resetBoard()//this will Reset the board 
     {
-        Vector3 positionOffset = transform.position - new Vector3(width * distance / 2.0f, height * distance / 2.0f, 0); 
-        for (int row = 0; row < height; row++)
-            for (int column = 0; column < width; column++) 
-            {
-                GameObject newTile = Instantiate(TilePrefab); 
-                SpriteRenderer renderer = newTile.GetComponent<SpriteRenderer>(); 
-                renderer.sprite = Sprites[Random.Range(0, Sprites.Count)]; 
-                newTile.transform.parent = transform; 
-                newTile.transform.position = new Vector3(column * distance, row * distance, 0) + positionOffset; 
-                Grid[column, row] = newTile;
-                Tile tile = newTile.AddComponent<Tile>();
-                tile.Position = new Vector2Int(column, row);
-            }
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
-    public static GridManager Instance { get; private set; }
-    void Awake() { Instance = this; }
+    public void quitGame()//this will quit the game
+    {
+        Application.Quit();
+    }
+
+    public static GridManager Instance { get; private set; } // create public instance for GridManager script
+    void Awake() 
+    { 
+        Instance = this;
+        Score = 0;
+    }
+
+ 
 
     // Start is called before the first frame update
     void Start()
     {
-        Grid = new GameObject[width, height];
-        InitGrid();
+        Grid = new GameObject[dimension, dimension];
+        fillBoard();
     }
 
-// Update is called once per frame
-void Update()
+    // Update is called once per frame
+    void Update()
     {
-        FillHoles();
+       
     }
 }
